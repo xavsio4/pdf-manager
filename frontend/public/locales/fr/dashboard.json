@@ -1,0 +1,45 @@
+{
+  "title": "Tableau de bord",
+  "uploadDocuments": "Télécharger des documents",
+  "yourDocuments": "Vos documents ({{count}})",
+  "accountInformation": "Informations du compte",
+  "quickStats": "Statistiques rapides",
+  "quickActions": "Actions rapides",
+  "stats": {
+    "total": "Total",
+    "pending": "En attente",
+    "processing": "En cours de traitement",
+    "completed": "Terminé",
+    "failed": "Échoué",
+    "documents": "Documents"
+  },
+  "upload": {
+    "title": "Télécharger un document PDF",
+    "uploading": "Téléchargement en cours...",
+    "dragAndDrop": "Glissez et déposez votre fichier PDF ici, ou cliquez pour le sélectionner",
+    "pleaseWait": "Veuillez patienter pendant le téléchargement de votre fichier",
+    "dropHere": "Déposez votre PDF ici !",
+    "maxFileSize": "Taille maximale du fichier : 50 Mo",
+    "supportedFiles": "Formats pris en charge : fichiers PDF uniquement",
+    "percentComplete": "{{percent}} % terminé",
+    "validationErrors": {
+      "pdfOnly": "Veuillez sélectionner un fichier PDF",
+      "tooLarge": "La taille du fichier doit être inférieure à 50 Mo"
+    }
+  },
+  "document": {
+    "file": "Fichier",
+    "size": "Taille",
+    "status": "Statut",
+    "processedAt": "Traité le",
+    "viewText": "Afficher le texte extrait",
+    "downloadPdf": "Télécharger le PDF",
+    "deleteDocument": "Supprimer le document"
+  },
+  "quickActionButtons": {
+    "searchDocuments": "🔍 Rechercher des documents",
+    "aiChat": "💬 Chat IA",
+    "viewAnalytics": "📊 Afficher les analyses",
+    "settings": "⚙️ Paramètres"
+  }
+}

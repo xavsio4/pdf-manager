@@ -1,0 +1,45 @@
+{
+  "title": "Dashboard",
+  "uploadDocuments": "Upload Documents",
+  "yourDocuments": "Your Documents ({{count}})",
+  "accountInformation": "Account Information",
+  "quickStats": "Quick Stats",
+  "quickActions": "Quick Actions",
+  "stats": {
+    "total": "Total",
+    "pending": "Pending",
+    "processing": "Processing",
+    "completed": "Completed",
+    "failed": "Failed",
+    "documents": "Documents"
+  },
+  "upload": {
+    "title": "Upload PDF Document",
+    "uploading": "Uploading...",
+    "dragAndDrop": "Drag and drop your PDF file here, or click to select",
+    "pleaseWait": "Please wait while your file is being uploaded",
+    "dropHere": "Drop your PDF here!",
+    "maxFileSize": "Maximum file size: 50MB",
+    "supportedFiles": "Supports: PDF files only",
+    "percentComplete": "{{percent}}% complete",
+    "validationErrors": {
+      "pdfOnly": "Please select a PDF file",
+      "tooLarge": "File size must be less than 50MB"
+    }
+  },
+  "document": {
+    "file": "File",
+    "size": "Size", 
+    "status": "Status",
+    "processedAt": "Processed",
+    "viewText": "View extracted text",
+    "downloadPdf": "Download PDF",
+    "deleteDocument": "Delete document"
+  },
+  "quickActionButtons": {
+    "searchDocuments": "🔍 Search Documents",
+    "aiChat": "💬 AI Chat", 
+    "viewAnalytics": "📊 View Analytics",
+    "settings": "⚙️ Settings"
+  }
+}

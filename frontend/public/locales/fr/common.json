@@ -1,0 +1,64 @@
+{
+  "appName": "Gestionnaire PDF",
+  "navigation": {
+    "dashboard": "Tableau de bord",
+    "aiChat": "Chat IA",
+    "documents": "Documents",
+    "settings": "Paramètres"
+  },
+  "auth": {
+    "login": "Se connecter",
+    "register": "Créer un compte",
+    "logout": "Déconnexion",
+    "welcome": "Bienvenue, {{username}} !",
+    "email": "Adresse e-mail",
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "signInToAccount": "Connectez-vous à votre compte",
+    "createNewAccount": "créer un nouveau compte",
+    "orCreateAccount": "Ou {{createLink}}",
+    "orSignIn": "Ou {{signInLink}}",
+    "signInToExisting": "se connecter au compte existant",
+    "emailPlaceholder": "Entrez votre e-mail",
+    "usernamePlaceholder": "Choisissez un nom d'utilisateur",
+    "passwordPlaceholder": "Entrez votre mot de passe",
+    "confirmPasswordPlaceholder": "Confirmez votre mot de passe",
+    "createPasswordPlaceholder": "Créez un mot de passe",
+    "signingIn": "Connexion en cours...",
+    "creatingAccount": "Création du compte..."
+  },
+  "buttons": {
+    "upload": "Télécharger",
+    "download": "Télécharger",
+    "delete": "Supprimer",
+    "cancel": "Annuler",
+    "save": "Sauvegarder",
+    "edit": "Modifier",
+    "view": "Voir",
+    "refresh": "Actualiser",
+    "tryAgain": "Réessayer",
+    "startNewChat": "Nouveau chat",
+    "send": "Envoyer"
+  },
+  "status": {
+    "loading": "Chargement...",
+    "pending": "En attente",
+    "processing": "Traitement en cours",
+    "completed": "Terminé",
+    "failed": "Échec",
+    "active": "Actif",
+    "inactive": "Inactif"
+  },
+  "messages": {
+    "uploadSuccess": "Téléchargement réussi ! Le traitement va commencer sous peu.",
+    "uploadFailed": "Échec du téléchargement",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce document ?",
+    "fileDeleted": "Document supprimé avec succès",
+    "fileCopied": "Texte copié dans le presse-papiers !",
+    "noDocuments": "Aucun document encore",
+    "noDocumentsDescription": "Téléchargez votre premier document PDF pour commencer !",
+    "errorLoadingDocuments": "Erreur lors du chargement des documents",
+    "uploadFirstPdf": "Téléchargez votre premier PDF pour commencer !"
+  }
+}

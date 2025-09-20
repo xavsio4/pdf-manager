@@ -1,0 +1,33 @@
+{
+  "title": "AI Document Chat",
+  "subtitle": "Ask questions about your uploaded documents. The AI will search through your files and provide intelligent answers.",
+  "newChat": "New Chat",
+  "aiChat": "AI Chat",
+  "chatWithDocuments": "Chat with your documents using AI",
+  "noChats": "No chat sessions yet",
+  "startFirstChat": "Start your first chat",
+  "loadingChats": "Loading chats...",
+  "loadingMessages": "Loading messages...",
+  "startConversation": "Start a conversation!",
+  "startConversationDescription": "Ask questions about your uploaded documents",
+  "askQuestions": "Ask questions about your documents",
+  "messagePlaceholder": "Ask a question about your documents...",
+  "pressEnterToSend": "Press Enter to send, Shift+Enter for new line",
+  "aiThinking": "AI is thinking...",
+  "referencedDocuments": "Referenced {{count}} document{{plural}}",
+  "tips": {
+    "title": "💡 Tips for better results:",
+    "askSpecific": "Ask specific questions:",
+    "askSpecificExamples": [
+      "• \"What are the key terms in my contract?\"",
+      "• \"Summarize the main findings\"", 
+      "• \"What does section 5 say about payments?\""
+    ],
+    "referenceSpecific": "Reference specific documents:",
+    "referenceSpecificExamples": [
+      "• \"In my lease agreement, what's the notice period?\"",
+      "• \"According to the manual, how do I reset the device?\"",
+      "• \"What does the research paper conclude?\""
+    ]
+  }
+}

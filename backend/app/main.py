@@ -407,6 +407,31 @@ async def get_chat_sessions(
         print(f"❌ Error getting chat sessions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+def generate_chat_title(message: str) -> str:
+    """Generate a meaningful title from the first message"""
+    # Clean the message
+    clean_message = message.strip()
+    
+    # If message is too short, use it as is
+    if len(clean_message) <= 50:
+        return clean_message
+    
+    # Try to find a good breaking point (sentence end, question mark, etc.)
+    for i, char in enumerate(clean_message):
+        if char in '.!?' and i >= 20:  # At least 20 chars
+            return clean_message[:i+1]
+    
+    # If no good breaking point, truncate at word boundary
+    if len(clean_message) > 50:
+        truncated = clean_message[:47]
+        last_space = truncated.rfind(' ')
+        if last_space > 20:  # Ensure we don't truncate too much
+            return truncated[:last_space] + "..."
+        else:
+            return truncated + "..."
+    
+    return clean_message
+
 @app.post("/chat/sessions/{session_id}/messages")
 async def send_chat_message(
     session_id: int,
@@ -429,6 +454,16 @@ async def send_chat_message(
         user_message = message.get("content", "").strip()
         if not user_message:
             raise HTTPException(status_code=400, detail="Message content cannot be empty")
+        
+        # Check if this is the first message in the session
+        existing_messages = db.query(models.ChatMessage).filter(
+            models.ChatMessage.session_id == session_id
+        ).count()
+        
+        # If this is the first message, update the session title
+        if existing_messages == 0:
+            new_title = generate_chat_title(user_message)
+            session.title = new_title
         
         # Save user message
         user_msg = models.ChatMessage(
@@ -463,6 +498,7 @@ async def send_chat_message(
         db.commit()
         db.refresh(user_msg)
         db.refresh(ai_msg)
+        db.refresh(session)
         
         return {
             "user_message": {
@@ -478,7 +514,8 @@ async def send_chat_message(
                 "referenced_documents": referenced_docs,
                 "created_at": ai_msg.created_at.isoformat()
             },
-            "context_used": len(similar_chunks)
+            "context_used": len(similar_chunks),
+            "session_title": session.title  # Include updated title in response
         }
         
     except HTTPException:

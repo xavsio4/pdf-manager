@@ -51,7 +51,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-for-jwt-tokens-change-this-in-production}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-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}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       ENVIRONMENT: development
       UPLOAD_DIR: /app/uploads
     volumes:

@@ -114,6 +114,34 @@ export default function ChatInterface() {
     }
   };
 
+  const deleteSession = async (sessionId: number, sessionTitle: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${sessionTitle}"? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_URL}/chat/sessions/${sessionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Remove session from the list
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+
+      // If the deleted session was the current one, clear it
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(null);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      alert("Failed to delete chat session");
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !currentSession || isSending) return;
 
@@ -266,28 +294,57 @@ export default function ChatInterface() {
           ) : (
             <div className="divide-y divide-gray-200">
               {sessions.map((session) => (
-                <button
+                <div
                   key={session.id}
-                  onClick={() => selectSession(session)}
-                  className={`w-full text-left p-4 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition-colors ${
+                  className={`group relative hover:bg-gray-100 transition-colors ${
                     currentSession?.id === session.id
                       ? "bg-indigo-50 border-r-2 border-indigo-500"
                       : ""
                   }`}>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {session.title}
+                  <button
+                    onClick={() => selectSession(session)}
+                    className="w-full text-left p-4 focus:outline-none focus:bg-gray-100">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-900 truncate pr-8">
+                        {session.title}
+                      </p>
+                      {currentSession?.id === session.id && (
+                        <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatFullDateTime(
+                        session.updated_at || session.created_at
+                      )}
                     </p>
-                    {currentSession?.id === session.id && (
-                      <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {formatFullDateTime(
-                      session.updated_at || session.created_at
-                    )}
-                  </p>
-                </button>
+                  </button>
+
+                  {/* Delete button - shows on hover or when session is selected */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSession(session.id, session.title);
+                    }}
+                    className={`absolute top-2 right-2 p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors ${
+                      currentSession?.id === session.id
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100"
+                    }`}
+                    title="Delete chat">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
           )}

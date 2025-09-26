@@ -60,5 +60,32 @@
     "noDocumentsDescription": "Téléchargez votre premier document PDF pour commencer !",
     "errorLoadingDocuments": "Erreur lors du chargement des documents",
     "uploadFirstPdf": "Téléchargez votre premier PDF pour commencer !"
+  },
+  "tags": {
+    "title": "Étiquettes",
+    "addTag": "Ajouter une étiquette",
+    "createTag": "Créer une étiquette",
+    "editTags": "Modifier les étiquettes",
+    "manageTags": "Gérer les étiquettes",
+    "tagName": "Nom de l'étiquette",
+    "tagNameFr": "Nom français (Optionnel)",
+    "tagColor": "Couleur",
+    "noTags": "Aucune étiquette",
+    "autoTagged": "Étiquetage automatique",
+    "customTag": "Personnalisé",
+    "defaultTag": "Par défaut",
+    "deleteTag": "Supprimer l'étiquette",
+    "deleteTagConfirm": "Êtes-vous sûr de vouloir supprimer cette étiquette ?",
+    "tagDeleted": "Étiquette supprimée avec succès",
+    "tagCreated": "Étiquette créée avec succès",
+    "tagsUpdated": "Étiquettes mises à jour avec succès",
+    "searchByTags": "Rechercher par étiquettes",
+    "filterByTags": "Filtrer par étiquettes",
+    "allTags": "Toutes les étiquettes",
+    "selectedTags": "Étiquettes sélectionnées",
+    "availableTags": "Étiquettes disponibles",
+    "searchOrCreateTag": "Rechercher ou créer une étiquette...",
+    "assign": "Assigner",
+    "removeTag": "Retirer l'étiquette"
   }
 }

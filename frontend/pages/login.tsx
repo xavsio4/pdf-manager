@@ -1,36 +1,37 @@
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import Link from 'next/link';
-import { useAuth } from '../context/AuthContext';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import Link from "next/link";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login, user } = useAuth();
   const router = useRouter();
 
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
-      console.log('Login attempt started');
-      await login(email, password);
-      console.log('Login successful, redirecting...');
-      router.push('/dashboard');
+      console.log("Login attempt started");
+      await login(email, password, rememberMe);
+      console.log("Login successful, redirecting...");
+      router.push("/dashboard");
     } catch (err: any) {
-      console.error('Login failed:', err);
+      console.error("Login failed:", err);
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -45,13 +46,15 @@ export default function Login() {
             Sign in to your account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Or{' '}
-            <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+            Or{" "}
+            <Link
+              href="/register"
+              className="font-medium text-indigo-600 hover:text-indigo-500">
               create a new account
             </Link>
           </p>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow-md p-8">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
@@ -59,9 +62,11 @@ export default function Login() {
                 {error}
               </div>
             )}
-            
+
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700">
                 Email address
               </label>
               <input
@@ -76,9 +81,11 @@ export default function Login() {
                 placeholder="Enter your email"
               />
             </div>
-            
+
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700">
                 Password
               </label>
               <input
@@ -94,19 +101,36 @@ export default function Login() {
               />
             </div>
 
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor="remember-me"
+                  className="ml-2 block text-sm text-gray-900">
+                  Remember me
+                </label>
+              </div>
+            </div>
+
             <div>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                 {isLoading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Signing in...
                   </div>
                 ) : (
-                  'Sign in'
+                  "Sign in"
                 )}
               </button>
             </div>

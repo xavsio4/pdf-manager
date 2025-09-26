@@ -56,6 +56,7 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+    remember_me: bool = False
 
 class Token(BaseModel):
     access_token: str
@@ -66,6 +67,25 @@ class UserResponse(BaseModel):
     email: str
     username: str
     is_active: bool
+
+class TagCreate(BaseModel):
+    name: str
+    name_fr: Optional[str] = None
+    color: Optional[str] = None
+
+class TagAssign(BaseModel):
+    tag_names: List[str]
+
+class TagResponse(BaseModel):
+    id: int
+    name: str
+    name_fr: Optional[str]
+    color: Optional[str]
+    is_default: bool
+    document_count: Optional[int] = None
+
+class DocumentTagsUpdate(BaseModel):
+    tag_ids: List[int]
 
 # Basic routes
 @app.get("/")
@@ -105,7 +125,7 @@ async def register(user: UserCreate, db: Session = Depends(database.get_db)):
 @app.post("/login", response_model=Token)
 async def login(credentials: UserLogin, db: Session = Depends(database.get_db)):
     try:
-        print(f"Login attempt for: {credentials.email}")
+        print(f"Login attempt for: {credentials.email} (remember_me: {credentials.remember_me})")
         
         # Authenticate user
         user = auth.authenticate_user(db, credentials.email, credentials.password)
@@ -115,14 +135,20 @@ async def login(credentials: UserLogin, db: Session = Depends(database.get_db)):
                 detail="Incorrect email or password"
             )
         
-        # Create token
-        access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+        # Create token with appropriate expiration
+        if credentials.remember_me:
+            # Long-lived token for "remember me" (30 days)
+            access_token_expires = timedelta(days=30)
+        else:
+            # Short-lived token for regular login (30 minutes)
+            access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+            
         access_token = auth.create_access_token(
             data={"sub": user.email}, 
             expires_delta=access_token_expires
         )
         
-        print(f"✅ Login successful for: {user.email}")
+        print(f"✅ Login successful for: {user.email} (expires in: {access_token_expires})")
         return {"access_token": access_token, "token_type": "bearer"}
         
     except HTTPException:
@@ -317,7 +343,17 @@ async def get_documents(
                 "file_size": doc.file_size,
                 "ocr_status": doc.ocr_status,
                 "title": doc.title,
-                "created_at": doc.created_at.isoformat() if doc.created_at else ""
+                "created_at": doc.created_at.isoformat() if doc.created_at else "",
+                "tags": [
+                    {
+                        "id": tag.id,
+                        "name": tag.name,
+                        "name_fr": tag.name_fr,
+                        "color": tag.color,
+                        "is_default": tag.is_default
+                    }
+                    for tag in doc.tags
+                ]
             }
             for doc in documents
         ]
@@ -455,13 +491,19 @@ async def send_chat_message(
         if not user_message:
             raise HTTPException(status_code=400, detail="Message content cannot be empty")
         
-        # Check if this is the first message in the session
-        existing_messages = db.query(models.ChatMessage).filter(
+        # Get recent chat history for context (last 10 messages)
+        recent_messages = db.query(models.ChatMessage).filter(
             models.ChatMessage.session_id == session_id
-        ).count()
+        ).order_by(models.ChatMessage.created_at.desc()).limit(10).all()
+        
+        # Reverse to get chronological order
+        recent_messages = list(reversed(recent_messages))
+        
+        # Check if this is the first message in the session
+        existing_messages_count = len(recent_messages)
         
         # If this is the first message, update the session title
-        if existing_messages == 0:
+        if existing_messages_count == 0:
             new_title = generate_chat_title(user_message)
             session.title = new_title
         
@@ -473,14 +515,31 @@ async def send_chat_message(
         )
         db.add(user_msg)
         
-        # Search for relevant content
+        # Build contextual query including recent conversation
         ai_service = AIService()
-        similar_chunks = ai_service.search_similar_content(
-            db, current_user.id, user_message, limit=5
-        )
+        if recent_messages:
+            # Create context from recent messages for better document search
+            conversation_context = "\n".join([
+                f"{msg.role}: {msg.content}" for msg in recent_messages[-5:]  # Last 5 messages
+            ])
+            
+            # Combine current message with conversation context for search
+            contextual_query = f"Previous conversation:\n{conversation_context}\n\nCurrent question: {user_message}"
+            
+            # Use contextual query for document search
+            similar_chunks = ai_service.search_similar_content(
+                db, current_user.id, contextual_query, limit=5
+            )
+        else:
+            # First message in conversation
+            similar_chunks = ai_service.search_similar_content(
+                db, current_user.id, user_message, limit=5
+            )
         
-        # Generate AI response
-        ai_response = ai_service.generate_ai_response(user_message, similar_chunks)
+        # Generate AI response with conversation history
+        ai_response = ai_service.generate_ai_response(
+            user_message, similar_chunks, conversation_history=recent_messages
+        )
         
         # Save AI response
         referenced_docs = list(set([chunk['document_id'] for chunk in similar_chunks]))
@@ -560,7 +619,292 @@ async def get_chat_messages(
         raise
     except Exception as e:
         print(f"❌ Error getting chat messages: {e}")
-        raise HTTPException(status_code=500, detail=str(e))    
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/chat/sessions/{session_id}")
+async def delete_chat_session(
+    session_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    try:
+        # Verify session belongs to user
+        session = db.query(models.ChatSession).filter(
+            models.ChatSession.id == session_id,
+            models.ChatSession.user_id == current_user.id
+        ).first()
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="Chat session not found")
+        
+        # Delete the session (messages will be deleted automatically due to cascade)
+        db.delete(session)
+        db.commit()
+        
+        print(f"✅ Chat session deleted: {session.title} (ID: {session_id})")
+        
+        return {"message": "Chat session deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error deleting chat session: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Tag management endpoints
+@app.get("/tags", response_model=List[TagResponse])
+async def get_tags(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Get all available tags for the current user"""
+    try:
+        from .services.tag_service import TagService
+        tag_service = TagService()
+        
+        # Ensure default tags exist
+        tag_service.create_default_tags(db)
+        
+        # Get tag statistics
+        tag_stats = tag_service.get_tag_statistics(db, current_user.id)
+        
+        return [
+            TagResponse(
+                id=stat["id"],
+                name=stat["name"],
+                name_fr=stat["name_fr"],
+                color=stat["color"],
+                is_default=stat["is_default"],
+                document_count=stat["document_count"]
+            )
+            for stat in tag_stats
+        ]
+        
+    except Exception as e:
+        print(f"❌ Error getting tags: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/tags", response_model=TagResponse)
+async def create_tag(
+    tag_data: TagCreate,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Create a custom tag"""
+    try:
+        from .services.tag_service import TagService
+        tag_service = TagService()
+        
+        tag = tag_service.get_or_create_tag(
+            db, current_user.id, tag_data.name, tag_data.name_fr
+        )
+        
+        return TagResponse(
+            id=tag.id,
+            name=tag.name,
+            name_fr=tag.name_fr,
+            color=tag.color,
+            is_default=tag.is_default,
+            document_count=0
+        )
+        
+    except Exception as e:
+        print(f"❌ Error creating tag: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/tags/assign", response_model=List[TagResponse])
+async def assign_tags(
+    tag_data: TagAssign,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Auto-create and assign tags by name"""
+    try:
+        from .services.tag_service import TagService
+        tag_service = TagService()
+        
+        created_tags = []
+        for tag_name in tag_data.tag_names:
+            if tag_name.strip():  # Only process non-empty tag names
+                tag = tag_service.get_or_create_tag(db, current_user.id, tag_name.strip())
+                created_tags.append(TagResponse(
+                    id=tag.id,
+                    name=tag.name,
+                    name_fr=tag.name_fr,
+                    color=tag.color,
+                    is_default=tag.is_default,
+                    document_count=0
+                ))
+        
+        return created_tags
+        
+    except Exception as e:
+        print(f"❌ Error assigning tags: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/tags/{tag_id}")
+async def delete_tag(
+    tag_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Delete a custom tag"""
+    try:
+        from .services.tag_service import TagService
+        tag_service = TagService()
+        
+        success = tag_service.delete_custom_tag(db, current_user.id, tag_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Tag not found or cannot be deleted")
+        
+        return {"message": "Tag deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error deleting tag: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/documents/{document_id}/tags", response_model=List[TagResponse])
+async def get_document_tags(
+    document_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Get tags for a specific document"""
+    try:
+        # Verify document belongs to user
+        document = db.query(models.Document).filter(
+            models.Document.id == document_id,
+            models.Document.owner_id == current_user.id
+        ).first()
+        
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        from .services.tag_service import TagService
+        tag_service = TagService()
+        
+        tags = tag_service.get_document_tags(db, document_id)
+        
+        return [
+            TagResponse(
+                id=tag.id,
+                name=tag.name,
+                name_fr=tag.name_fr,
+                color=tag.color,
+                is_default=tag.is_default
+            )
+            for tag in tags
+        ]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error getting document tags: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/documents/{document_id}/tags")
+async def update_document_tags(
+    document_id: int,
+    tags_update: DocumentTagsUpdate,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Update tags for a specific document"""
+    try:
+        # Verify document belongs to user
+        document = db.query(models.Document).filter(
+            models.Document.id == document_id,
+            models.Document.owner_id == current_user.id
+        ).first()
+        
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        from .services.tag_service import TagService
+        tag_service = TagService()
+        
+        # Verify all tag IDs are valid and accessible to the user
+        available_tags = tag_service.get_all_tags(db, current_user.id)
+        available_tag_ids = {tag.id for tag in available_tags}
+        
+        invalid_tag_ids = set(tags_update.tag_ids) - available_tag_ids
+        if invalid_tag_ids:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid tag IDs: {list(invalid_tag_ids)}"
+            )
+        
+        # Apply tags to document
+        tag_service.apply_tags_to_document(db, document, tags_update.tag_ids)
+        
+        return {"message": "Document tags updated successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error updating document tags: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/documents/search/by-tags")
+async def search_documents_by_tags(
+    tag_ids: str,  # Comma-separated tag IDs
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Search documents by tags"""
+    try:
+        # Parse tag IDs
+        try:
+            tag_id_list = [int(id.strip()) for id in tag_ids.split(',') if id.strip()]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid tag IDs format")
+        
+        if not tag_id_list:
+            raise HTTPException(status_code=400, detail="No tag IDs provided")
+        
+        from .services.tag_service import TagService
+        tag_service = TagService()
+        
+        documents = tag_service.search_documents_by_tags(db, current_user.id, tag_id_list)
+        
+        return [
+            {
+                "id": doc.id,
+                "filename": doc.filename,
+                "original_filename": doc.original_filename,
+                "file_size": doc.file_size,
+                "ocr_status": doc.ocr_status,
+                "title": doc.title,
+                "created_at": doc.created_at.isoformat() if doc.created_at else "",
+                "tags": [
+                    {
+                        "id": tag.id,
+                        "name": tag.name,
+                        "name_fr": tag.name_fr,
+                        "color": tag.color,
+                        "is_default": tag.is_default
+                    }
+                    for tag in doc.tags
+                ]
+            }
+            for doc in documents
+        ]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error searching documents by tags: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 print("🚀 FastAPI app initialized with routes:")
 for route in app.routes:

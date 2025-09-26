@@ -163,7 +163,7 @@ class AIService:
             ).filter(
                 models.Document.owner_id == user_id,
                 models.DocumentEmbedding.embedding.isnot(None)
-            ).limit(200).all()  # Increased limit for better search
+            ).all()  # Get ALL embeddings to ensure all documents are considered
             
             print(f"📊 Found {len(user_embeddings)} document chunks to search through")
             
@@ -171,11 +171,32 @@ class AIService:
             similarities = []
             for emb in user_embeddings:
                 try:
-                    # emb.embedding is already a list of floats from pgvector, no need to parse JSON
+                    # Handle different embedding storage formats
                     stored_embedding = emb.embedding
+                    
+                    # Convert pgvector format to list of floats if needed
+                    if hasattr(stored_embedding, '__iter__') and not isinstance(stored_embedding, str):
+                        # Already a list/array of numbers
+                        stored_embedding = list(stored_embedding)
+                    elif isinstance(stored_embedding, str):
+                        # Try to parse as JSON if it's a string
+                        try:
+                            stored_embedding = json.loads(stored_embedding)
+                        except:
+                            print(f"⚠️ Could not parse embedding as JSON for chunk {emb.chunk_index}")
+                            continue
+                    else:
+                        print(f"⚠️ Unknown embedding format for chunk {emb.chunk_index}: {type(stored_embedding)}")
+                        continue
+                    
+                    # Ensure both embeddings are lists of floats
+                    if not isinstance(stored_embedding, list) or not isinstance(query_embedding, list):
+                        print(f"⚠️ Invalid embedding format: stored={type(stored_embedding)}, query={type(query_embedding)}")
+                        continue
+                    
                     similarity = self.cosine_similarity(query_embedding, stored_embedding)
                     
-                    # Boost similarity for keyword matches (especially for invoices)
+                    # Boost similarity for keyword matches
                     keyword_boost = self._calculate_keyword_boost(query.lower(), emb.chunk_text.lower())
                     boosted_similarity = similarity + keyword_boost
                     
@@ -188,14 +209,14 @@ class AIService:
                         'keyword_boost': keyword_boost
                     })
                 except Exception as e:
-                    print(f"⚠️ Error processing embedding: {e}")
+                    print(f"⚠️ Error processing embedding for chunk {emb.chunk_index}: {e}")
                     continue
             
             # Sort by boosted similarity and return top results
             similarities.sort(key=lambda x: x['boosted_similarity'], reverse=True)
             
-            # Filter results with minimum similarity threshold
-            min_similarity = 0.3  # Lower threshold to catch more potential matches
+            # Lower the threshold to catch more potential matches for French content
+            min_similarity = 0.1  # Lowered to 0.1 to catch Candy document matches
             filtered_results = [s for s in similarities if s['boosted_similarity'] > min_similarity]
             
             top_results = filtered_results[:limit]
@@ -228,6 +249,8 @@ class AIService:
             
         except Exception as e:
             print(f"❌ Error in similarity search: {e}")
+            import traceback
+            traceback.print_exc()
             return []
     
     def _calculate_keyword_boost(self, query: str, text: str) -> float:
@@ -282,18 +305,18 @@ class AIService:
             print(f"❌ Error calculating cosine similarity: {e}")
             return 0
     
-    def generate_ai_response(self, query: str, context_chunks: List[Dict[str, Any]]) -> str:
+    def generate_ai_response(self, query: str, context_chunks: List[Dict[str, Any]], conversation_history: List = None) -> str:
         """Generate AI response based on query and context"""
         # Try local AI first, then fallback to cloud services
         if self.ollama_service.use_local_ai and self.ollama_service.is_available():
             try:
-                return self.ollama_service.generate_ai_response(query, context_chunks)
+                return self.ollama_service.generate_ai_response(query, context_chunks, conversation_history)
             except Exception as e:
                 print(f"⚠️ Local AI failed, falling back to cloud: {e}")
         
         # Fallback to OpenAI
         if self.openai_client:
-            return self._generate_openai_response(query, context_chunks)
+            return self._generate_openai_response(query, context_chunks, conversation_history)
         else:
             return "Sorry, AI chat is not available. Please configure your OPENAI_API_KEY or set up local AI."
     
@@ -343,7 +366,7 @@ Answer:"""
             print(f"❌ Error generating Claude response: {e}")
             return f"Sorry, I encountered an error while processing your question with Claude: {str(e)}"
     
-    def _generate_openai_response(self, query: str, context_chunks: List[Dict[str, Any]]) -> str:
+    def _generate_openai_response(self, query: str, context_chunks: List[Dict[str, Any]], conversation_history: List = None) -> str:
         """Generate AI response using OpenAI (fallback)"""
         try:
             # Prepare context from similar chunks
@@ -352,19 +375,28 @@ Answer:"""
                 for chunk in context_chunks
             ])
             
-            # Create the prompt
+            # Build conversation context if available
+            conversation_context = ""
+            if conversation_history:
+                conversation_context = "\n\nPrevious conversation:\n"
+                for msg in conversation_history[-5:]:  # Last 5 messages
+                    conversation_context += f"{msg.role.title()}: {msg.content}\n"
+            
+            # Create the prompt with conversation history
             prompt = f"""You are an AI assistant helping users understand their documents. 
-Answer the user's question based only on the provided context from their documents.
+Answer the user's question based on the provided context and previous conversation.
 
 Context from documents:
 {context}
+{conversation_context}
 
-User question: {query}
+Current user question: {query}
 
 Instructions:
-- Only use information from the provided context
+- Use information from both the document context AND previous conversation
+- If referring to something mentioned earlier, acknowledge the conversation history
+- Be consistent with previous responses in the same conversation
 - If the context doesn't contain relevant information, say so clearly
-- Be concise but comprehensive
 - Mention which documents you're referencing when relevant
 - If you're not certain about something, express that uncertainty
 
@@ -375,7 +407,7 @@ Answer:"""
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o-mini",  # Better model for document analysis
                 messages=[
-                    {"role": "system", "content": "You are a helpful AI assistant that answers questions based only on provided document context."},
+                    {"role": "system", "content": "You are a helpful AI assistant that answers questions based on provided document context and conversation history."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=1000,

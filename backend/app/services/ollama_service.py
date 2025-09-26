@@ -115,7 +115,7 @@ class OllamaService:
             print(f"❌ Error generating response with Ollama: {e}")
             raise e
     
-    def generate_ai_response(self, query: str, context_chunks: List[Dict[str, Any]]) -> str:
+    def generate_ai_response(self, query: str, context_chunks: List[Dict[str, Any]], conversation_history: List = None) -> str:
         """Generate AI response based on query and context using local model"""
         try:
             # Prepare context from similar chunks
@@ -124,21 +124,30 @@ class OllamaService:
                 for chunk in context_chunks
             ])
             
-            # Create the system prompt
-            system_prompt = "You are a helpful AI assistant that answers questions based only on provided document context. Be concise but comprehensive, and mention which documents you're referencing when relevant."
+            # Build conversation context if available
+            conversation_context = ""
+            if conversation_history:
+                conversation_context = "\n\nPrevious conversation:\n"
+                for msg in conversation_history[-5:]:  # Last 5 messages
+                    conversation_context += f"{msg.role.title()}: {msg.content}\n"
             
-            # Create the user prompt
-            user_prompt = f"""Answer the user's question based only on the provided context from their documents.
+            # Create the system prompt
+            system_prompt = "You are a helpful AI assistant that answers questions based on provided document context and conversation history. Be concise but comprehensive, and mention which documents you're referencing when relevant."
+            
+            # Create the user prompt with conversation history
+            user_prompt = f"""Answer the user's question based on the provided context and previous conversation.
 
 Context from documents:
 {context}
+{conversation_context}
 
-User question: {query}
+Current user question: {query}
 
 Instructions:
-- Only use information from the provided context
+- Use information from both the document context AND previous conversation
+- If referring to something mentioned earlier, acknowledge the conversation history
+- Be consistent with previous responses in the same conversation
 - If the context doesn't contain relevant information, say so clearly
-- Be concise but comprehensive
 - Mention which documents you're referencing when relevant
 - If you're not certain about something, express that uncertainty
 

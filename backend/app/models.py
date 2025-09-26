@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, LargeBinary
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, LargeBinary, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -12,6 +12,14 @@ except ImportError:
         return Text  # Fallback to Text type
 
 Base = declarative_base()
+
+# Association table for many-to-many relationship between documents and tags
+document_tags = Table(
+    'document_tags',
+    Base.metadata,
+    Column('document_id', Integer, ForeignKey('documents.id'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey('tags.id'), primary_key=True)
+)
 
 class User(Base):
     __tablename__ = "users"
@@ -57,7 +65,8 @@ class Document(Base):
     
     # Relationships
     owner = relationship("User", back_populates="documents")
-    embeddings = relationship("DocumentEmbedding", back_populates="document")
+    embeddings = relationship("DocumentEmbedding", back_populates="document", cascade="all, delete-orphan")
+    tags = relationship("Tag", secondary=document_tags, back_populates="documents")
 
 class DocumentEmbedding(Base):
     __tablename__ = "document_embeddings"
@@ -84,7 +93,7 @@ class ChatSession(Base):
     
     # Relationships
     user = relationship("User")
-    messages = relationship("ChatMessage", back_populates="session")
+    messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
@@ -98,3 +107,18 @@ class ChatMessage(Base):
     
     # Relationship
     session = relationship("ChatSession", back_populates="messages")
+
+class Tag(Base):
+    __tablename__ = "tags"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, index=True)
+    name_fr = Column(String, nullable=True, index=True)  # French translation
+    color = Column(String, nullable=True)  # Hex color code for UI
+    is_default = Column(Boolean, default=False)  # Whether it's a system default tag
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # NULL for default tags, user_id for custom tags
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User")
+    documents = relationship("Document", secondary=document_tags, back_populates="tags")

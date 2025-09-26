@@ -66,6 +66,26 @@ def process_pdf_ocr(self, document_id: int):
                 print(f"⚠️ Failed to generate embeddings for document {document_id}: {e}")
                 # Don't fail the OCR process if embeddings fail
             
+            # Auto-tag the document based on OCR content
+            try:
+                from ..services.tag_service import TagService
+                tag_service = TagService()
+                
+                # Ensure default tags exist
+                tag_service.create_default_tags(db)
+                
+                # Auto-tag the document
+                suggested_tags = tag_service.auto_tag_document(db, document)
+                if suggested_tags:
+                    tag_service.apply_tags_to_document(db, document, [tag.id for tag in suggested_tags])
+                    tag_names = [tag.name for tag in suggested_tags]
+                    print(f"✅ Auto-tagged document {document_id} with: {', '.join(tag_names)}")
+                else:
+                    print(f"ℹ️ No auto-tags suggested for document {document_id}")
+            except Exception as e:
+                print(f"⚠️ Failed to auto-tag document {document_id}: {e}")
+                # Don't fail the OCR process if auto-tagging fails
+            
             return {
                 "document_id": document_id,
                 "status": "completed",

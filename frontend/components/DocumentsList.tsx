@@ -1,9 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "next-i18next";
 import DocumentTextViewer from "./DocumentTextViewer";
+import TagManager from "./TagManager";
 import axios from "axios";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+interface Tag {
+  id: number;
+  name: string;
+  name_fr?: string;
+  color: string;
+  is_default: boolean;
+}
 
 interface Document {
   id: number;
@@ -13,6 +23,7 @@ interface Document {
   ocr_status: string;
   title?: string;
   created_at: string;
+  tags: Tag[];
 }
 
 interface DocumentsListProps {
@@ -27,6 +38,8 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
     null
   );
   const [selectedDocumentName, setSelectedDocumentName] = useState<string>("");
+  const [editingTags, setEditingTags] = useState<number | null>(null);
+  const [selectedTags, setSelectedTags] = useState<number[]>([]);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -36,6 +49,8 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
   });
 
   const { token } = useAuth();
+  const { t, i18n } = useTranslation("common");
+  const isFrench = i18n.language === "fr";
 
   const fetchDocuments = useCallback(async () => {
     try {
@@ -176,6 +191,51 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
   const handleViewText = (documentId: number, filename: string) => {
     setSelectedDocumentId(documentId);
     setSelectedDocumentName(filename);
+  };
+
+  const handleEditTags = (documentId: number, currentTags: Tag[]) => {
+    setEditingTags(documentId);
+    setSelectedTags(currentTags.map((tag) => tag.id));
+  };
+
+  const handleSaveTags = async () => {
+    if (editingTags === null) return;
+
+    try {
+      await axios.put(
+        `${API_URL}/documents/${editingTags}/tags`,
+        { tag_ids: selectedTags },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Refresh the documents list to show updated tags
+      fetchDocuments();
+      setEditingTags(null);
+      setSelectedTags([]);
+    } catch (error: any) {
+      console.error("Error updating tags:", error);
+      alert(
+        "Failed to update tags: " +
+          (error.response?.data?.detail || error.message)
+      );
+    }
+  };
+
+  const handleCancelEditTags = () => {
+    setEditingTags(null);
+    setSelectedTags([]);
+  };
+
+  const getTagDisplayName = (tag: Tag) => {
+    if (isFrench && tag.name_fr) {
+      return tag.name_fr;
+    }
+    return tag.name;
   };
 
   const getStatusBadge = (status: string) => {
@@ -392,10 +452,43 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
                           <span>•</span>
                           <span>{formatDate(doc.created_at)}</span>
                         </div>
+
+                        {/* Tags */}
+                        {doc.tags && doc.tags.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {doc.tags.map((tag) => (
+                              <span
+                                key={tag.id}
+                                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                                style={{
+                                  borderLeft: `3px solid ${tag.color}`,
+                                }}>
+                                {getTagDisplayName(tag)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div className="ml-4 flex-shrink-0 flex space-x-2">
+                      <button
+                        onClick={() => handleEditTags(doc.id, doc.tags)}
+                        className="text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 p-1 rounded"
+                        title={t("tags.editTags")}>
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                          />
+                        </svg>
+                      </button>
                       <button
                         onClick={() =>
                           handleViewText(doc.id, doc.original_filename)
@@ -470,6 +563,56 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
             setSelectedDocumentName("");
           }}
         />
+      )}
+
+      {/* Tag Editor Modal */}
+      {editingTags !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                {t("tags.editTags")}
+              </h3>
+              <button
+                onClick={handleCancelEditTags}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <TagManager
+              selectedTags={selectedTags}
+              onTagsChange={setSelectedTags}
+              showCreateTag={true}
+              showTagCounts={false}
+              mode="select"
+            />
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={handleCancelEditTags}
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
+                {t("buttons.cancel")}
+              </button>
+              <button
+                onClick={handleSaveTags}
+                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                {t("buttons.save")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

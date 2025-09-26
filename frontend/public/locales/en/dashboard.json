@@ -29,7 +29,7 @@
   },
   "document": {
     "file": "File",
-    "size": "Size", 
+    "size": "Size",
     "status": "Status",
     "processedAt": "Processed",
     "viewText": "View extracted text",
@@ -38,8 +38,36 @@
   },
   "quickActionButtons": {
     "searchDocuments": "🔍 Search Documents",
-    "aiChat": "💬 AI Chat", 
+    "aiChat": "💬 AI Chat",
     "viewAnalytics": "📊 View Analytics",
     "settings": "⚙️ Settings"
+  },
+  "properties": {
+    "title": "Properties",
+    "create": "Create",
+    "createNew": "Create New Property",
+    "createFirst": "Create Your First Property",
+    "noProperties": "No properties yet",
+    "allProperties": "All Properties",
+    "viewAll": "View all documents",
+    "document": "document",
+    "documents": "documents",
+    "viewMore": "View {{count}} more...",
+    "fields": {
+      "name": "Property Name",
+      "streetAddress": "Street Address",
+      "city": "City",
+      "zipCode": "ZIP Code",
+      "country": "Country",
+      "description": "Description"
+    },
+    "placeholders": {
+      "name": "Enter property name",
+      "streetAddress": "Enter street address",
+      "city": "Enter city",
+      "zipCode": "Enter ZIP code",
+      "country": "Enter country",
+      "description": "Enter property description"
+    }
   }
 }

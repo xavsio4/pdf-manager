@@ -39,7 +39,8 @@
     "refresh": "Refresh",
     "tryAgain": "Try Again",
     "startNewChat": "Start New Chat",
-    "send": "Send"
+    "send": "Send",
+    "create": "Create"
   },
   "status": {
     "loading": "Loading...",
@@ -48,7 +49,8 @@
     "completed": "Completed",
     "failed": "Failed",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "creating": "Creating..."
   },
   "messages": {
     "uploadSuccess": "Upload successful! Processing will begin shortly.",

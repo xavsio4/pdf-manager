@@ -8,38 +8,66 @@
   "stats": {
     "total": "Total",
     "pending": "En attente",
-    "processing": "En cours de traitement",
+    "processing": "En cours",
     "completed": "Terminé",
     "failed": "Échoué",
     "documents": "Documents"
   },
   "upload": {
     "title": "Télécharger un document PDF",
-    "uploading": "Téléchargement en cours...",
-    "dragAndDrop": "Glissez et déposez votre fichier PDF ici, ou cliquez pour le sélectionner",
+    "uploading": "Téléchargement...",
+    "dragAndDrop": "Glissez-déposez votre fichier PDF ici, ou cliquez pour sélectionner",
     "pleaseWait": "Veuillez patienter pendant le téléchargement de votre fichier",
     "dropHere": "Déposez votre PDF ici !",
-    "maxFileSize": "Taille maximale du fichier : 50 Mo",
-    "supportedFiles": "Formats pris en charge : fichiers PDF uniquement",
-    "percentComplete": "{{percent}} % terminé",
+    "maxFileSize": "Taille maximale du fichier : 50MB",
+    "supportedFiles": "Supporte : Fichiers PDF uniquement",
+    "percentComplete": "{{percent}}% terminé",
     "validationErrors": {
       "pdfOnly": "Veuillez sélectionner un fichier PDF",
-      "tooLarge": "La taille du fichier doit être inférieure à 50 Mo"
+      "tooLarge": "La taille du fichier doit être inférieure à 50MB"
     }
   },
   "document": {
     "file": "Fichier",
     "size": "Taille",
     "status": "Statut",
-    "processedAt": "Traité le",
-    "viewText": "Afficher le texte extrait",
+    "processedAt": "Traité",
+    "viewText": "Voir le texte extrait",
     "downloadPdf": "Télécharger le PDF",
     "deleteDocument": "Supprimer le document"
   },
   "quickActionButtons": {
     "searchDocuments": "🔍 Rechercher des documents",
     "aiChat": "💬 Chat IA",
-    "viewAnalytics": "📊 Afficher les analyses",
+    "viewAnalytics": "📊 Voir les analyses",
     "settings": "⚙️ Paramètres"
+  },
+  "properties": {
+    "title": "Propriétés",
+    "create": "Créer",
+    "createNew": "Créer une nouvelle propriété",
+    "createFirst": "Créer votre première propriété",
+    "noProperties": "Aucune propriété pour le moment",
+    "allProperties": "Toutes les propriétés",
+    "viewAll": "Voir tous les documents",
+    "document": "document",
+    "documents": "documents",
+    "viewMore": "Voir {{count}} de plus...",
+    "fields": {
+      "name": "Nom de la propriété",
+      "streetAddress": "Adresse",
+      "city": "Ville",
+      "zipCode": "Code postal",
+      "country": "Pays",
+      "description": "Description"
+    },
+    "placeholders": {
+      "name": "Entrez le nom de la propriété",
+      "streetAddress": "Entrez l'adresse",
+      "city": "Entrez la ville",
+      "zipCode": "Entrez le code postal",
+      "country": "Entrez le pays",
+      "description": "Entrez la description de la propriété"
+    }
   }
 }

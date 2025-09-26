@@ -87,6 +87,34 @@ class TagResponse(BaseModel):
 class DocumentTagsUpdate(BaseModel):
     tag_ids: List[int]
 
+class PropertyCreate(BaseModel):
+    name: str
+    country: Optional[str] = None
+    street_address: Optional[str] = None
+    city: Optional[str] = None
+    zip_code: Optional[str] = None
+    description: Optional[str] = None
+
+class PropertyUpdate(BaseModel):
+    name: Optional[str] = None
+    country: Optional[str] = None
+    street_address: Optional[str] = None
+    city: Optional[str] = None
+    zip_code: Optional[str] = None
+    description: Optional[str] = None
+
+class PropertyResponse(BaseModel):
+    id: int
+    name: str
+    country: Optional[str]
+    street_address: Optional[str]
+    city: Optional[str]
+    zip_code: Optional[str]
+    description: Optional[str]
+    created_at: str
+    updated_at: Optional[str]
+    document_count: Optional[int] = None
+
 # Basic routes
 @app.get("/")
 async def root():
@@ -903,6 +931,330 @@ async def search_documents_by_tags(
         raise
     except Exception as e:
         print(f"❌ Error searching documents by tags: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Property management endpoints
+@app.get("/properties", response_model=List[PropertyResponse])
+async def get_properties(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Get all properties for the current user"""
+    try:
+        properties = db.query(models.Property).filter(
+            models.Property.owner_id == current_user.id
+        ).order_by(models.Property.created_at.desc()).all()
+        
+        # Get document count for each property
+        result = []
+        for prop in properties:
+            document_count = db.query(models.Document).filter(
+                models.Document.property_id == prop.id
+            ).count()
+            
+            result.append(PropertyResponse(
+                id=prop.id,
+                name=prop.name,
+                country=prop.country,
+                street_address=prop.street_address,
+                city=prop.city,
+                zip_code=prop.zip_code,
+                description=prop.description,
+                created_at=prop.created_at.isoformat(),
+                updated_at=prop.updated_at.isoformat() if prop.updated_at else None,
+                document_count=document_count
+            ))
+        
+        return result
+        
+    except Exception as e:
+        print(f"❌ Error getting properties: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/properties", response_model=PropertyResponse)
+async def create_property(
+    property_data: PropertyCreate,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Create a new property"""
+    try:
+        property = models.Property(
+            name=property_data.name,
+            country=property_data.country,
+            street_address=property_data.street_address,
+            city=property_data.city,
+            zip_code=property_data.zip_code,
+            description=property_data.description,
+            owner_id=current_user.id
+        )
+        
+        db.add(property)
+        db.commit()
+        db.refresh(property)
+        
+        print(f"✅ Property created: {property.name} (ID: {property.id})")
+        
+        return PropertyResponse(
+            id=property.id,
+            name=property.name,
+            country=property.country,
+            street_address=property.street_address,
+            city=property.city,
+            zip_code=property.zip_code,
+            description=property.description,
+            created_at=property.created_at.isoformat(),
+            updated_at=property.updated_at.isoformat() if property.updated_at else None,
+            document_count=0
+        )
+        
+    except Exception as e:
+        print(f"❌ Error creating property: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/properties/{property_id}", response_model=PropertyResponse)
+async def get_property(
+    property_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Get a specific property"""
+    try:
+        property = db.query(models.Property).filter(
+            models.Property.id == property_id,
+            models.Property.owner_id == current_user.id
+        ).first()
+        
+        if not property:
+            raise HTTPException(status_code=404, detail="Property not found")
+        
+        document_count = db.query(models.Document).filter(
+            models.Document.property_id == property.id
+        ).count()
+        
+        return PropertyResponse(
+            id=property.id,
+            name=property.name,
+            country=property.country,
+            street_address=property.street_address,
+            city=property.city,
+            zip_code=property.zip_code,
+            description=property.description,
+            created_at=property.created_at.isoformat(),
+            updated_at=property.updated_at.isoformat() if property.updated_at else None,
+            document_count=document_count
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error getting property: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/properties/{property_id}", response_model=PropertyResponse)
+async def update_property(
+    property_id: int,
+    property_data: PropertyUpdate,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Update a property"""
+    try:
+        property = db.query(models.Property).filter(
+            models.Property.id == property_id,
+            models.Property.owner_id == current_user.id
+        ).first()
+        
+        if not property:
+            raise HTTPException(status_code=404, detail="Property not found")
+        
+        # Update fields if provided
+        if property_data.name is not None:
+            property.name = property_data.name
+        if property_data.country is not None:
+            property.country = property_data.country
+        if property_data.street_address is not None:
+            property.street_address = property_data.street_address
+        if property_data.city is not None:
+            property.city = property_data.city
+        if property_data.zip_code is not None:
+            property.zip_code = property_data.zip_code
+        if property_data.description is not None:
+            property.description = property_data.description
+        
+        property.updated_at = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(property)
+        
+        document_count = db.query(models.Document).filter(
+            models.Document.property_id == property.id
+        ).count()
+        
+        print(f"✅ Property updated: {property.name} (ID: {property.id})")
+        
+        return PropertyResponse(
+            id=property.id,
+            name=property.name,
+            country=property.country,
+            street_address=property.street_address,
+            city=property.city,
+            zip_code=property.zip_code,
+            description=property.description,
+            created_at=property.created_at.isoformat(),
+            updated_at=property.updated_at.isoformat() if property.updated_at else None,
+            document_count=document_count
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error updating property: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/properties/{property_id}")
+async def delete_property(
+    property_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Delete a property and all its related documents, embeddings, and chats"""
+    try:
+        property = db.query(models.Property).filter(
+            models.Property.id == property_id,
+            models.Property.owner_id == current_user.id
+        ).first()
+        
+        if not property:
+            raise HTTPException(status_code=404, detail="Property not found")
+        
+        # Get documents to delete files from disk
+        documents = db.query(models.Document).filter(
+            models.Document.property_id == property.id
+        ).all()
+        
+        # Delete files from disk
+        for document in documents:
+            try:
+                Path(document.file_path).unlink(missing_ok=True)
+                print(f"✅ File deleted from disk: {document.file_path}")
+            except Exception as e:
+                print(f"⚠️ Could not delete file from disk: {e}")
+        
+        # Delete property (cascading will handle documents, embeddings, and chats)
+        db.delete(property)
+        db.commit()
+        
+        print(f"✅ Property deleted: {property.name} (ID: {property.id})")
+        
+        return {"message": "Property and all related data deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error deleting property: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/documents/{document_id}/property")
+async def assign_document_to_property(
+    document_id: int,
+    property_id: Optional[int] = None,  # None to unassign
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Assign or unassign a document to/from a property"""
+    try:
+        # Verify document belongs to user
+        document = db.query(models.Document).filter(
+            models.Document.id == document_id,
+            models.Document.owner_id == current_user.id
+        ).first()
+        
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        # If property_id is provided, verify it belongs to user
+        if property_id is not None:
+            property = db.query(models.Property).filter(
+                models.Property.id == property_id,
+                models.Property.owner_id == current_user.id
+            ).first()
+            
+            if not property:
+                raise HTTPException(status_code=404, detail="Property not found")
+        
+        # Update document property assignment
+        document.property_id = property_id
+        db.commit()
+        
+        action = "assigned to" if property_id else "unassigned from"
+        property_name = property.name if property_id else "any property"
+        print(f"✅ Document {document.original_filename} {action} property: {property_name}")
+        
+        return {"message": f"Document {action} property successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error assigning document to property: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/properties/{property_id}/documents")
+async def get_property_documents(
+    property_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Get all documents for a specific property"""
+    try:
+        # Verify property belongs to user
+        property = db.query(models.Property).filter(
+            models.Property.id == property_id,
+            models.Property.owner_id == current_user.id
+        ).first()
+        
+        if not property:
+            raise HTTPException(status_code=404, detail="Property not found")
+        
+        documents = db.query(models.Document).filter(
+            models.Document.property_id == property_id
+        ).order_by(models.Document.created_at.desc()).all()
+        
+        return [
+            {
+                "id": doc.id,
+                "filename": doc.filename,
+                "original_filename": doc.original_filename,
+                "file_size": doc.file_size,
+                "ocr_status": doc.ocr_status,
+                "title": doc.title,
+                "created_at": doc.created_at.isoformat() if doc.created_at else "",
+                "property_id": doc.property_id,
+                "tags": [
+                    {
+                        "id": tag.id,
+                        "name": tag.name,
+                        "name_fr": tag.name_fr,
+                        "color": tag.color,
+                        "is_default": tag.is_default
+                    }
+                    for tag in doc.tags
+                ]
+            }
+            for doc in documents
+        ]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error getting property documents: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 

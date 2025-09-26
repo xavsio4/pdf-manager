@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "next-i18next";
 import DocumentTextViewer from "./DocumentTextViewer";
+import DocumentPDFViewer from "./DocumentPDFViewer";
 import TagManager from "./TagManager";
 import axios from "axios";
 
@@ -28,9 +29,13 @@ interface Document {
 
 interface DocumentsListProps {
   refreshTrigger: number;
+  selectedPropertyId?: number | null;
 }
 
-export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
+export default function DocumentsList({
+  refreshTrigger,
+  selectedPropertyId,
+}: DocumentsListProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -38,6 +43,11 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
     null
   );
   const [selectedDocumentName, setSelectedDocumentName] = useState<string>("");
+  const [selectedPDFDocumentId, setSelectedPDFDocumentId] = useState<
+    number | null
+  >(null);
+  const [selectedPDFDocumentName, setSelectedPDFDocumentName] =
+    useState<string>("");
   const [editingTags, setEditingTags] = useState<number | null>(null);
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
   const [stats, setStats] = useState({
@@ -56,7 +66,14 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
     try {
       setError("");
 
-      const response = await axios.get<Document[]>(`${API_URL}/documents`, {
+      let url = `${API_URL}/documents`;
+
+      // If a specific property is selected, fetch documents for that property
+      if (selectedPropertyId !== null && selectedPropertyId !== undefined) {
+        url = `${API_URL}/properties/${selectedPropertyId}/documents`;
+      }
+
+      const response = await axios.get<Document[]>(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -89,7 +106,7 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, selectedPropertyId]);
 
   // Initial fetch and refresh trigger
   useEffect(() => {
@@ -191,6 +208,11 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
   const handleViewText = (documentId: number, filename: string) => {
     setSelectedDocumentId(documentId);
     setSelectedDocumentName(filename);
+  };
+
+  const handleViewPDF = (documentId: number, filename: string) => {
+    setSelectedPDFDocumentId(documentId);
+    setSelectedPDFDocumentName(filename);
   };
 
   const handleEditTags = (documentId: number, currentTags: Tag[]) => {
@@ -442,9 +464,14 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
                       </div>
                       <div className="ml-4 min-w-0 flex-1">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          <button
+                            onClick={() =>
+                              handleViewPDF(doc.id, doc.original_filename)
+                            }
+                            className="text-sm font-medium text-gray-900 dark:text-white truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer text-left"
+                            title="Click to view PDF">
                             {doc.original_filename}
-                          </p>
+                          </button>
                           {getStatusBadge(doc.ocr_status)}
                         </div>
                         <div className="mt-1 flex items-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
@@ -565,6 +592,18 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
         />
       )}
 
+      {/* PDF Viewer Modal */}
+      {selectedPDFDocumentId && (
+        <DocumentPDFViewer
+          documentId={selectedPDFDocumentId}
+          filename={selectedPDFDocumentName}
+          onClose={() => {
+            setSelectedPDFDocumentId(null);
+            setSelectedPDFDocumentName("");
+          }}
+        />
+      )}
+
       {/* Tag Editor Modal */}
       {editingTags !== null && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -594,7 +633,6 @@ export default function DocumentsList({ refreshTrigger }: DocumentsListProps) {
             <TagManager
               selectedTags={selectedTags}
               onTagsChange={setSelectedTags}
-              showCreateTag={true}
               showTagCounts={false}
               mode="select"
             />

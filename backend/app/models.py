@@ -32,8 +32,31 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
-    # Relationship to documents
+    # Relationships
     documents = relationship("Document", back_populates="owner")
+    properties = relationship("Property", back_populates="owner", cascade="all, delete-orphan")
+
+class Property(Base):
+    __tablename__ = "properties"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)  # Mandatory property name
+    country = Column(String, nullable=True)  # Optional
+    street_address = Column(String, nullable=True)  # Optional
+    city = Column(String, nullable=True)  # Optional
+    zip_code = Column(String, nullable=True)  # Optional
+    description = Column(Text, nullable=True)  # Optional
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Foreign key to user
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Relationships
+    owner = relationship("User", back_populates="properties")
+    documents = relationship("Document", back_populates="property", cascade="all, delete-orphan")
 
 class Document(Base):
     __tablename__ = "documents"
@@ -60,11 +83,13 @@ class Document(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     processed_at = Column(DateTime(timezone=True), nullable=True)
     
-    # Foreign key to user
+    # Foreign keys
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    property_id = Column(Integer, ForeignKey("properties.id"), nullable=True)  # Optional property link
     
     # Relationships
     owner = relationship("User", back_populates="documents")
+    property = relationship("Property", back_populates="documents")
     embeddings = relationship("DocumentEmbedding", back_populates="document", cascade="all, delete-orphan")
     tags = relationship("Tag", secondary=document_tags, back_populates="documents")
 
@@ -87,12 +112,14 @@ class ChatSession(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    property_id = Column(Integer, ForeignKey("properties.id"), nullable=True)  # Optional property context
     title = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
     user = relationship("User")
+    property = relationship("Property")
     messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
 
 class ChatMessage(Base):

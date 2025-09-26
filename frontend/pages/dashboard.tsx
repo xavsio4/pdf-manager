@@ -8,10 +8,16 @@ import FileUpload from "../components/FileUpload";
 import DocumentsList from "../components/DocumentsList";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggle from "../components/ThemeToggle";
+import PropertySelector from "../components/PropertySelector";
+import PropertyCreateModal from "../components/PropertyCreateModal";
 
 export default function Dashboard() {
   const { user, logout, loading } = useAuth();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(
+    null
+  );
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const router = useRouter();
   const { t } = useTranslation(["common", "dashboard"]);
 
@@ -23,6 +29,21 @@ export default function Dashboard() {
 
   const handleUploadSuccess = () => {
     // Trigger a refresh of the documents list
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handlePropertySelect = (propertyId: number | null) => {
+    setSelectedPropertyId(propertyId);
+    // Trigger refresh to load documents for the selected property
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleCreateProperty = () => {
+    setShowCreateModal(true);
+  };
+
+  const handlePropertyCreated = () => {
+    // Refresh the property selector to show the new property
     setRefreshTrigger((prev) => prev + 1);
   };
 
@@ -102,7 +123,10 @@ export default function Dashboard() {
 
             {/* Documents List */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <DocumentsList refreshTrigger={refreshTrigger} />
+              <DocumentsList
+                refreshTrigger={refreshTrigger}
+                selectedPropertyId={selectedPropertyId}
+              />
             </div>
           </div>
 
@@ -142,6 +166,13 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Property Selector */}
+            <PropertySelector
+              selectedPropertyId={selectedPropertyId}
+              onPropertySelect={handlePropertySelect}
+              onCreateProperty={handleCreateProperty}
+            />
 
             {/* Quick Stats */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -201,6 +232,13 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Property Create Modal */}
+      <PropertyCreateModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onPropertyCreated={handlePropertyCreated}
+      />
     </div>
   );
 }

@@ -69,5 +69,29 @@
       "country": "Entrez le pays",
       "description": "Entrez la description de la propriété"
     }
+  },
+  "accountDescription": "Gérez les paramètres et préférences de votre compte",
+  "account": {
+    "userId": "ID utilisateur",
+    "actions": "Actions du compte",
+    "editProfile": "Modifier le profil",
+    "editProfileDesc": "Mettre à jour vos informations personnelles",
+    "changePassword": "Changer le mot de passe",
+    "changePasswordDesc": "Mettre à jour le mot de passe de votre compte",
+    "preferences": "Préférences",
+    "preferencesDesc": "Personnaliser votre expérience",
+    "dangerZone": "Zone de danger",
+    "deleteAccount": "Supprimer le compte",
+    "deleteAccountDesc": "Supprimer définitivement votre compte et toutes les données"
+  },
+  "selectedProperty": {
+    "title": "Propriété sélectionnée",
+    "noPropertySelected": "Aucune propriété sélectionnée",
+    "selectPropertyDesc": "Sélectionnez une propriété pour voir ses détails",
+    "editProperty": "Modifier la propriété",
+    "propertyDetails": "Détails de la propriété",
+    "address": "Adresse",
+    "description": "Description",
+    "documentCount": "Documents"
   }
 }

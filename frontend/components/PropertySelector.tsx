@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "next-i18next";
+import { useAuth } from "../context/AuthContext";
+import { useProperty } from "../context/PropertyContext";
 
 interface Property {
   id: number;
@@ -23,43 +25,8 @@ export default function PropertySelector({
   onPropertySelect,
   onCreateProperty,
 }: PropertySelectorProps) {
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation(["common", "dashboard"]);
-
-  useEffect(() => {
-    fetchProperties();
-  }, []);
-
-  const fetchProperties = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("No authentication token");
-      }
-
-      const response = await fetch("http://localhost:8000/properties", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch properties");
-      }
-
-      const data = await response.json();
-      setProperties(data);
-    } catch (err) {
-      console.error("Error fetching properties:", err);
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { properties, loading, error } = useProperty();
 
   const formatPropertyAddress = (property: Property) => {
     const parts = [

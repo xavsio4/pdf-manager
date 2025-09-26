@@ -4,20 +4,24 @@ import { useTranslation } from "next-i18next";
 import { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useAuth } from "../context/AuthContext";
+import { useProperty } from "../context/PropertyContext";
 import FileUpload from "../components/FileUpload";
 import DocumentsList from "../components/DocumentsList";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggle from "../components/ThemeToggle";
 import PropertySelector from "../components/PropertySelector";
 import PropertyCreateModal from "../components/PropertyCreateModal";
+import PropertyEditModal from "../components/PropertyEditModal";
+import SelectedPropertyBox from "../components/SelectedPropertyBox";
 
 export default function Dashboard() {
   const { user, logout, loading } = useAuth();
+  const { selectedPropertyId, setSelectedPropertyId, refreshProperties } =
+    useProperty();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(
-    null
-  );
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editPropertyId, setEditPropertyId] = useState<number | null>(null);
   const router = useRouter();
   const { t } = useTranslation(["common", "dashboard"]);
 
@@ -44,6 +48,18 @@ export default function Dashboard() {
 
   const handlePropertyCreated = () => {
     // Refresh the property selector to show the new property
+    refreshProperties();
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleEditProperty = (propertyId: number) => {
+    setEditPropertyId(propertyId);
+    setShowEditModal(true);
+  };
+
+  const handlePropertyUpdated = () => {
+    // Refresh both the property selector and selected property box
+    refreshProperties();
     setRefreshTrigger((prev) => prev + 1);
   };
 
@@ -96,9 +112,11 @@ export default function Dashboard() {
             <div className="flex items-center space-x-4">
               <ThemeToggle />
               <LanguageSwitcher />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
+              <a
+                href="/account"
+                className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
                 {t("common:auth.welcome", { username: user.username })}
-              </span>
+              </a>
               <button
                 onClick={handleLogout}
                 className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
@@ -132,40 +150,12 @@ export default function Dashboard() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Account Info */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t("dashboard:accountInformation")}
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    {t("common:auth.email")}
-                  </label>
-                  <p className="text-sm text-gray-900 dark:text-gray-100">
-                    {user.email}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    {t("common:auth.username")}
-                  </label>
-                  <p className="text-sm text-gray-900 dark:text-gray-100">
-                    {user.username}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    {t("common:status.status")}
-                  </label>
-                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                    {user.is_active
-                      ? t("common:status.active")
-                      : t("common:status.inactive")}
-                  </span>
-                </div>
-              </div>
-            </div>
+            {/* Selected Property Info */}
+            <SelectedPropertyBox
+              selectedPropertyId={selectedPropertyId}
+              onEditProperty={handleEditProperty}
+              refreshTrigger={refreshTrigger}
+            />
 
             {/* Property Selector */}
             <PropertySelector
@@ -173,39 +163,6 @@ export default function Dashboard() {
               onPropertySelect={handlePropertySelect}
               onCreateProperty={handleCreateProperty}
             />
-
-            {/* Quick Stats */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t("dashboard:quickStats")}
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {t("dashboard:stats.documents")}
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {t("common:status.loading")}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {t("dashboard:stats.processing")}
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    -
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {t("dashboard:stats.completed")}
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    -
-                  </span>
-                </div>
-              </div>
-            </div>
 
             {/* Quick Actions */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -238,6 +195,17 @@ export default function Dashboard() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onPropertyCreated={handlePropertyCreated}
+      />
+
+      {/* Property Edit Modal */}
+      <PropertyEditModal
+        isOpen={showEditModal}
+        propertyId={editPropertyId}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditPropertyId(null);
+        }}
+        onPropertyUpdated={handlePropertyUpdated}
       />
     </div>
   );

@@ -63,6 +63,12 @@ export default function DocumentsList({
   const isFrench = i18n.language === "fr";
 
   const fetchDocuments = useCallback(async () => {
+    if (!token) {
+      setError("No authentication token");
+      setLoading(false);
+      return;
+    }
+
     try {
       setError("");
 

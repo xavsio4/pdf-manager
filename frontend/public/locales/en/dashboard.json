@@ -69,5 +69,29 @@
       "country": "Enter country",
       "description": "Enter property description"
     }
+  },
+  "accountDescription": "Manage your account settings and preferences",
+  "account": {
+    "userId": "User ID",
+    "actions": "Account Actions",
+    "editProfile": "Edit Profile",
+    "editProfileDesc": "Update your personal information",
+    "changePassword": "Change Password",
+    "changePasswordDesc": "Update your account password",
+    "preferences": "Preferences",
+    "preferencesDesc": "Customize your experience",
+    "dangerZone": "Danger Zone",
+    "deleteAccount": "Delete Account",
+    "deleteAccountDesc": "Permanently delete your account and all data"
+  },
+  "selectedProperty": {
+    "title": "Selected Property",
+    "noPropertySelected": "No property selected",
+    "selectPropertyDesc": "Select a property to view its details",
+    "editProperty": "Edit Property",
+    "propertyDetails": "Property Details",
+    "address": "Address",
+    "description": "Description",
+    "documentCount": "Documents"
   }
 }

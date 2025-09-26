@@ -78,3 +78,44 @@ CREATE TABLE properties (
 ALTER TABLE documents ADD COLUMN property_id INTEGER REFERENCES properties(id);
 ALTER TABLE chat_sessions ADD COLUMN property_id INTEGER REFERENCES properties(id);
 ```
+
+### 2025-09-26 - Authentication & Property Selection Fixes
+
+✅ **Authentication Token Management**: Fixed "Loading failed: No authentication token" errors
+✅ **Default Property Selection**: Automatic property selection on login for better UX
+✅ **Property-Based Document Filtering**: Documents now filter correctly by selected property
+✅ **Session Persistence**: Property selection persists across screens and browser sessions
+✅ **Centralized State Management**: Created PropertyContext for consistent property handling
+✅ **Cross-Screen Consistency**: Property selection maintained when navigating between dashboard, chat, and other screens
+
+**Issues Fixed:**
+
+- **Authentication Errors**: Components were using `localStorage.getItem("token")` directly instead of AuthContext
+- **No Default Selection**: Users had no property selected after login, causing confusion
+- **Document Filtering**: Document list didn't change when switching between properties
+- **Session Loss**: Property selection was lost when navigating between screens
+
+**Technical Implementation:**
+
+- **PropertyContext**: New React context (`frontend/context/PropertyContext.tsx`) for centralized property management
+- **Session Storage**: User-specific property selection stored as `selectedPropertyId_{userId}`
+- **Auto-Selection Logic**: Automatically selects first available property on login
+- **Token Centralization**: All components now use `useAuth()` hook instead of direct localStorage access
+- **Component Updates**: Updated Dashboard, PropertySelector, SelectedPropertyBox, and DocumentsList
+- **Performance Optimization**: Used `useCallback` for optimized re-rendering
+
+**API Endpoints Used:**
+
+- `GET /properties` - Fetch user's properties
+- `GET /documents` - All documents (when "All Properties" selected)
+- `GET /properties/{id}/documents` - Property-specific documents
+- `GET /properties/{id}` - Individual property details
+
+**State Management Flow:**
+
+1. User logs in → PropertyContext loads properties
+2. First property auto-selected if none stored in session
+3. Property selection triggers document filtering
+4. Selection persists in sessionStorage with user-specific key
+5. Navigation between screens maintains selected property
+6. Logout clears all property state

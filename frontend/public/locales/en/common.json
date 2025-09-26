@@ -4,7 +4,9 @@
     "dashboard": "Dashboard",
     "aiChat": "AI Chat",
     "documents": "Documents",
-    "settings": "Settings"
+    "settings": "Settings",
+    "account": "Account",
+    "backToDashboard": "Back to Dashboard"
   },
   "auth": {
     "login": "Sign In",
@@ -62,6 +64,9 @@
     "noDocumentsDescription": "Upload your first PDF document to get started!",
     "errorLoadingDocuments": "Error loading documents",
     "uploadFirstPdf": "Upload your first PDF to get started!"
+  },
+  "errors": {
+    "loadingFailed": "Loading failed"
   },
   "tags": {
     "title": "Tags",

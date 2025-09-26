@@ -4,7 +4,9 @@
     "dashboard": "Tableau de bord",
     "aiChat": "Chat IA",
     "documents": "Documents",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "account": "Compte",
+    "backToDashboard": "Retour au tableau de bord"
   },
   "auth": {
     "login": "Se connecter",
@@ -60,6 +62,9 @@
     "noDocumentsDescription": "Téléchargez votre premier document PDF pour commencer !",
     "errorLoadingDocuments": "Erreur lors du chargement des documents",
     "uploadFirstPdf": "Téléchargez votre premier PDF pour commencer !"
+  },
+  "errors": {
+    "loadingFailed": "Échec du chargement"
   },
   "tags": {
     "title": "Étiquettes",
